@@ -1,0 +1,9 @@
+{
+  "name": "wrap-route",
+  "version": "0.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Devancn/wrap-route.git",
+  "author": "dingxiaohuan <wydingxiaohuan@163.com>",
+  "license": "MIT",
+  "dependencies": {}
+}
