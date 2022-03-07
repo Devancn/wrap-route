@@ -13,7 +13,8 @@ export default function keep(Route) {
       pageRoot: null
     }
     static propTypes = {
-      location: PropTypes.object.isRequired
+      location: PropTypes.object.isRequired,
+      shouldKeep: PropTypes.func
     }
     static getDerivedStateFromProps({ location, ...rest }) {
       return {
@@ -21,7 +22,19 @@ export default function keep(Route) {
       }
     }
     shouldComponentUpdate(nextProps, nextState) {
-      if (nextProps.isKeepDisabled) return true
+      let isKeep = true;
+      const { shouldKeep, location, ...rest } = nextProps;
+      if (typeof shouldKeep === 'function') {
+        isKeep = shouldKeep({
+          root: this.state.pageRoot,
+          matcher: function (pathname) {
+            return matchPath(pathname, rest)
+          }, path: nextProps.path
+        })
+      }
+      if (!isKeep) {
+        return true;
+      }
       const shouldUpdate = Boolean(nextState.match);
       this.rootSwitch(shouldUpdate);
       if (shouldUpdate) {
@@ -31,7 +44,6 @@ export default function keep(Route) {
         }
       }
       return shouldUpdate
-
     }
     rootSwitch(shouldUpdate) {
       const dom = this.state.pageRoot
