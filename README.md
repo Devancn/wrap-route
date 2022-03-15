@@ -1,11 +1,3 @@
----
-nav:
-  title: '通用组件'
-  path: /components
-group:
-  path: /
----
-
 ## RouteSwitch
 
 keep 包装后的组件 KeepRoute 必须传一个 location 属性，该属性的值为项目中用到的最外层 router 中的 location 才行，最外层 router 组件 HashRouter 或 BrowserRouter

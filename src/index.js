@@ -45,7 +45,7 @@ export default function keep(Route) {
       }
       let shouldUpdate = Boolean(nextState.matched);
       if (pageRoot) {
-        if (this.routePhase === NORMAL || !this.state.matched && shouldUpdate && this.routePhase === HIDE) {
+        if (this.routePhase === NORMAL || (!this.state.matched && shouldUpdate && this.routePhase === HIDE)) {
           this.routePhase = SHOW
           pageRoot.style.display = 'block'
           shouldUpdate = false
@@ -72,7 +72,7 @@ export default function keep(Route) {
       }
     }
     onPageHide = (callback) => {
-      if (typeof callback === 'function') {
+      if (typeof callback === 'function' && this.hidePageCallbacks.indexOf(callback) === -1) {
         this.hidePageCallbacks.push(callback)
       }
     }
