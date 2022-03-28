@@ -1,10 +1,16 @@
-import pathToRegexp from "path-to-regexp";
+import pathToRegexp from 'path-to-regexp';
 
 const cache = {};
-const cacheLimit = 10000;
+const cacheLimit: number = 10000;
 let cacheCount = 0;
 
-function compilePath(path, options) {
+interface CompileOptions {
+  end?: boolean;
+  strict?: boolean;
+  sensitive?: boolean;
+}
+
+function compilePath(path: string, options: CompileOptions) {
   const cacheKey = `${options.end}${options.strict}${options.sensitive}`;
   const pathCache = cache[cacheKey] || (cache[cacheKey] = {});
 
@@ -22,24 +28,50 @@ function compilePath(path, options) {
   return result;
 }
 
-function matchPath(pathname, options = {}) {
-  if (typeof options === "string" || Array.isArray(options)) {
+interface MatchOptions {
+  path?: string | string[];
+  end?: boolean;
+  exact?: boolean;
+  strict?: boolean;
+  sensitive?: boolean;
+}
+
+type Options = MatchOptions | string | string[];
+
+interface PathParams {
+  [name: string]: any;
+}
+
+export interface matchPathValues {
+  path: string;
+  url: string;
+  isExact: boolean;
+  params: PathParams;
+}
+
+function matchPath(pathname: string, options: Options = {}): matchPathValues {
+  if (typeof options === 'string' || Array.isArray(options)) {
     options = { path: options };
   }
 
-  // 兼容 react router 新老版本
-  const { path, end, exact = false, strict = false, sensitive = false } = options;
+  const {
+    path,
+    end,
+    exact = false,
+    strict = false,
+    sensitive = false,
+  } = options;
 
   const paths = [].concat(path);
 
   return paths.reduce((matched, path) => {
-    if (!path && path !== "") return null;
+    if (!path && path !== '') return null;
     if (matched) return matched;
 
     const { regexp, keys } = compilePath(path, {
       end: end || exact,
       strict,
-      sensitive
+      sensitive,
     });
     const match = regexp.exec(pathname);
 
@@ -52,12 +84,12 @@ function matchPath(pathname, options = {}) {
 
     return {
       path,
-      url: path === "/" && url === "" ? "/" : url,
+      url: path === '/' && url === '' ? '/' : url,
       isExact,
       params: keys.reduce((memo, key, index) => {
         memo[key.name] = values[index];
         return memo;
-      }, {})
+      }, {}),
     };
   }, null);
 }
