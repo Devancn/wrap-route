@@ -4,7 +4,7 @@ import matchPath, { matchPathValues } from './matchPath';
 enum Phase {
   NORMAL,
   SHOW,
-  HIDE,
+  HIDE
 }
 
 interface ShouldKeepParams {
@@ -12,9 +12,18 @@ interface ShouldKeepParams {
   match: (pathname: string) => matchPathValues;
 }
 
+interface Location {
+  state: unknown;
+  key: string;
+  pathname: string;
+  search: string;
+  hash: string;
+}
+
 interface KeepRouteProps {
-  path: string;
-  shouldKeep: (params: ShouldKeepParams) => boolean;
+  location: Location;
+  containerStyle?: React.CSSProperties;
+  shouldKeep?: (params: ShouldKeepParams) => boolean;
   [key: string]: any;
 }
 
@@ -23,12 +32,27 @@ interface KeepRouteState {
   pageRoot: null | HTMLElement;
 }
 
+type lifeCycleType = (callback: () => void) => void;
 export interface KeepContextState extends KeepRouteState {
-  onPageShow: (callback: () => void, isImmediate: boolean) => void;
-  onPageHide: (callback: () => void) => void;
+  onPageShow: lifeCycleType;
+  onPageHide: lifeCycleType;
 }
 
-export const KeepContext = React.createContext < KeepContextState > (null);
+export const KeepContext = React.createContext<KeepContextState>(null);
+
+export function useOnPageShow(callback: () => void) {
+  const { onPageShow } = React.useContext(KeepContext);
+  React.useEffect(() => {
+    onPageShow(callback);
+  }, []);
+}
+
+export function useOnPageHide(callback: () => void) {
+  const { onPageHide } = React.useContext(KeepContext);
+  React.useEffect(() => {
+    onPageHide(callback);
+  }, []);
+}
 
 export default function keep(Route: React.ElementType) {
   return class extends React.Component<KeepRouteProps, KeepRouteState> {
@@ -37,24 +61,22 @@ export default function keep(Route: React.ElementType) {
     routePhase: Phase = Phase.NORMAL;
     state = {
       matched: null,
-      pageRoot: null,
+      pageRoot: null
     };
     static getDerivedStateFromProps({ location, ...rest }) {
       return {
-        matched: matchPath(location.pathname, rest),
+        matched: matchPath(location.pathname, rest)
       };
     }
     shouldComponentUpdate(nextProps, nextState) {
       let isKeep = true;
-      const pageRoot = this.state.pageRoot;
+      const { pageRoot } = this.state;
       const { shouldKeep, location, ...rest } = nextProps;
       if (typeof shouldKeep === 'function') {
         isKeep = shouldKeep({
           root: pageRoot,
-          match: function (pathname) {
-            return matchPath(pathname, rest);
-          },
-          path: nextProps.path,
+          match: pathname => matchPath(pathname, rest),
+          path: nextProps.path
         });
       }
       if (!isKeep) {
@@ -64,19 +86,13 @@ export default function keep(Route: React.ElementType) {
       if (pageRoot) {
         if (
           this.routePhase === Phase.NORMAL ||
-          (!this.state.matched &&
-            shouldUpdate &&
-            this.routePhase === Phase.HIDE)
+          (!this.state.matched && shouldUpdate && this.routePhase === Phase.HIDE)
         ) {
           this.routePhase = Phase.SHOW;
           pageRoot.style.display = 'block';
           shouldUpdate = false;
           this.showPageCallbacks.forEach(callback => callback.call(null));
-        } else if (
-          this.state.matched &&
-          !shouldUpdate &&
-          this.routePhase === Phase.SHOW
-        ) {
+        } else if (this.state.matched && !shouldUpdate && this.routePhase === Phase.SHOW) {
           this.routePhase = Phase.HIDE;
           pageRoot.style.display = 'none';
           this.hidePageCallbacks.forEach(callback => callback.call(null));
@@ -89,39 +105,30 @@ export default function keep(Route: React.ElementType) {
         this.setState({ pageRoot });
       }
     };
-    onPageShow = (callback, isImmediate = true) => {
-      if (
-        typeof callback === 'function' &&
-        this.showPageCallbacks.indexOf(callback) === -1
-      ) {
+    onPageShow = callback => {
+      if (typeof callback === 'function' && this.showPageCallbacks.indexOf(callback) === -1) {
         this.showPageCallbacks.push(callback);
       }
-      if (isImmediate && this.routePhase === Phase.SHOW) {
-        this.showPageCallbacks.forEach(callback => callback.call(null));
+      if (this.routePhase === Phase.SHOW) {
+        this.showPageCallbacks.forEach(cb => cb.call(null));
       }
     };
     onPageHide = callback => {
-      if (
-        typeof callback === 'function' &&
-        this.hidePageCallbacks.indexOf(callback) === -1
-      ) {
+      if (typeof callback === 'function' && this.hidePageCallbacks.indexOf(callback) === -1) {
         this.hidePageCallbacks.push(callback);
       }
     };
     render() {
       const { matched, pageRoot } = this.state;
+      const { containerStyle = {} } = this.props;
       return matched ? (
-        <div
-          className={this.props.path}
-          ref={this.savePageRoot}
-          style={{ height: '100%' }}
-        >
+        <div className={this.props.path} ref={this.savePageRoot} style={{ height: '100%', ...containerStyle }}>
           <KeepContext.Provider
             value={{
               matched,
               pageRoot,
               onPageShow: this.onPageShow,
-              onPageHide: this.onPageHide,
+              onPageHide: this.onPageHide
             }}
           >
             {<Route {...this.props} />}
